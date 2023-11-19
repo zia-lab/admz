@@ -1,0 +1,1 @@
+gcc -O3 -o lanthanide lanthanide.c  -llapack -lblas -lm -lF77 -lI77 -lz
