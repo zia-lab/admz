@@ -16,7 +16,7 @@ def list_to_symmetric_matrix(lst, dtype = np.float_):
     # Fill in the upper triangular part of the matrix
     idx = 0
     for i in range(N):
-        for j in range(i, N):
+        for j in range(0, i+1):
             matrix[i, j] = lst[idx]
             idx += 1
 
@@ -82,7 +82,7 @@ def execute_and_print_realtime(command, workdir='./', verbose=True):
 param_template = '''1.0 1.0 1.0 0.0 0.0 0.0
 {F2} {F4} {F6} {zeta}
 {alpha} {beta} {gamma}
-{T2} {T3} {T4} {T5} {T7} {T8}
+{T2} {T3} {T4} {T6} {T7} {T8}
 {Bx} {By} {Bz}
 '''
 
@@ -154,9 +154,9 @@ cfp_template = '''0 0 {B00}
 
 def param_inp_file_maker(numE, F2=0., F4=0., F6=0., zeta=0.,
                          alpha=0., beta=0., gamma=0.,
-                         T2=0., T3=0., T4=0., T5=0., T7=0., T8=0.,
+                         T2=0., T3=0., T4=0., T6=0., T7=0., T8=0.,
                          Bx=0., By=0., Bz=0.):
-    file_content = param_template.format(F2=F2, F4=F4, F6=F6, zeta=zeta, alpha=alpha, beta=beta, gamma=gamma, T2=T2, T3=T3, T4=T4, T5=T5, T7=T7, T8=T8, Bx=Bx, By=By, Bz=Bz)
+    file_content = param_template.format(F2=F2, F4=F4, F6=F6, zeta=zeta, alpha=alpha, beta=beta, gamma=gamma, T2=T2, T3=T3, T4=T4, T6=T6, T7=T7, T8=T8, Bx=Bx, By=By, Bz=Bz)
     with open('./f%d/param.inp' % numE, 'w') as f:
         f.write(file_content)
     return file_content
@@ -178,9 +178,9 @@ def cfp_inp_file_maker(numE, Bkq):
 
 def lanthanide(numE, F2=0., F4=0., F6=0., zeta=0.,
                alpha=0., beta=0., gamma=0.,
-               T2=0., T3=0., T4=0., T5=0., T7=0., T8=0.,
+               T2=0., T3=0., T4=0., T6=0., T7=0., T8=0.,
                Bx=0., By=0., Bz=0.,
-               Bkq={}):
+               Bkq={}, verbose=True):
     numStates = {1:14,
                  2:91,
                  3:364,
@@ -194,7 +194,7 @@ def lanthanide(numE, F2=0., F4=0., F6=0., zeta=0.,
                  11:364,
                  12:91,
                  13:14}[numE]
-    param_inp_file_maker(numE, F2=F2, F4=F4, F6=F6, zeta=zeta, alpha=alpha, beta=beta, gamma=gamma, T2=T2, T3=T3, T4=T4, T5=T5, T7=T7, T8=T8, Bx=Bx, By=By, Bz=Bz)
+    param_inp_file_maker(numE, F2=F2, F4=F4, F6=F6, zeta=zeta, alpha=alpha, beta=beta, gamma=gamma, T2=T2, T3=T3, T4=T4, T6=T6, T7=T7, T8=T8, Bx=Bx, By=By, Bz=Bz)
     cfp_inp_file_maker(numE, Bkq)
     if not os.path.exists('./lanthanide'):
         print("lanthanide binary not found, compiling ...")
@@ -207,10 +207,10 @@ def lanthanide(numE, F2=0., F4=0., F6=0., zeta=0.,
         print("vk1k2k3.gz not found, running lanthanide 0 %d %d..." % (numStates, numE))
         command = ['./lanthanide','0','%d' % numStates, '%d' % numE]
         command = ' '.join(command)
-        execute_and_print_realtime(command, workdir='./f%d' % numE)
+        execute_and_print_realtime(command, workdir='./f%d' % numE, verbose=verbose)
     print("Running lanthanide 1 %d %d..." % (numStates, numE))
     command = ['./lanthanide','1', '%d' % numStates, '%d' % numE]
     command = ' '.join(command)
-    execute_and_print_realtime(command, workdir='./f%d' % numE)
+    execute_and_print_realtime(command, workdir='./f%d' % numE, verbose=verbose)
     energies = np.genfromtxt('./f%d/energies' % numE)
     return energies

@@ -280,7 +280,6 @@ int main(int argc, char **argv)
                 Matrix_element_Hcf(method, i, j);
                 Matrix_element_Hm(method, i, j);
                 load_Vkkpkb(i, j); // If it's already saved, get it from here!
-
                 // Calculate real and imaginary parts of the matrix element
                 RE_matrix = Matrix_element(method, i, j) 
                             + Matrix_element_SO(method, i, j) 
@@ -1430,16 +1429,13 @@ int method_judd(int i, int j)
     
     }
 
-
-
     for(k=0; k<electrons; k++)
     {
-    
-    if((states[i][k].ml!=states_tmp[j][k].ml)||(states[i][k].ms!=states_tmp[j][k].ms))
-    {
-    m++;  
-    un_paired[m]=k;
-    }
+        if((states[i][k].ml!=states_tmp[j][k].ml)||(states[i][k].ms!=states_tmp[j][k].ms))
+        {
+            m++;  
+            un_paired[m]=k;
+        }
     }
 
     return(m);
