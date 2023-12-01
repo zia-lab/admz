@@ -2,9 +2,30 @@
 
 import os
 import gzip
+import time
 import shutil
+import argparse
 import subprocess
 import numpy as np
+from datapipes import *
+from carnall import bill
+
+lns = ["Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm","Yb"]
+
+def from_string_to_standard_Bqk(aDict):
+    newDict = {}
+    for k, v in aDict.items():
+        if not (k[0] == 'B'):
+            continue
+        newDict[(int(k[2]), int(k[1]))] = v
+    return newDict
+def from_dict_to_free_ion_params(aDict):
+    goodKeys = ['F2', 'F4', 'F6', 'zeta', 'alpha', 'beta', 'gamma','T2','T3','T4','T6','T7','T8']
+    newDict = {}
+    for k, v in aDict.items():
+        if k in goodKeys:
+            newDict[k] = v
+    return newDict
 
 def list_to_symmetric_matrix(lst, dtype = np.float_):
     # Calculate the size of the matrix
@@ -214,3 +235,34 @@ def lanthanide(numE, F2=0., F4=0., F6=0., zeta=0.,
     execute_and_print_realtime(command, workdir='./f%d' % numE, verbose=verbose)
     energies = np.genfromtxt('./f%d/energies' % numE)
     return energies
+
+if __name__ == '__main__':
+    start_time = time.time()
+    argparser = argparse.ArgumentParser(description='Lanthanide')
+    # get the number of electrons
+    argparser.add_argument('n', type=int, help='Number of electrons')
+    numE = argparser.parse_args().n
+    ln = lns[numE-1]
+    Bkq = from_string_to_standard_Bqk(bill[ln])
+    free_ion_params = from_dict_to_free_ion_params(bill["Nd"])
+    sym_dict = {}
+    for k, v in Bkq.items():
+        sym_dict[k] = v
+        inverse_key = (k[0], -k[1])
+        if inverse_key not in Bkq.keys():
+            sym_dict[inverse_key] = v
+    Bkq = sym_dict
+    energies = lanthanide(numE,
+              **free_ion_params,
+              Bkq=Bkq
+              )
+    end_time = time.time()
+    time_taken = end_time - start_time
+    exportdict = {'energies': energies,
+                  'time_taken_in_s': time_taken,
+                  'Bkq_values': list(Bkq.values()),
+                  'Bkq_keys': list(Bkq.keys()),
+                  'free_ion_params_values': list(free_ion_params.values()),
+                  'free_ion_params_keys': list(free_ion_params.keys()),
+                  'ln': ln}
+    save_to_h5(exportdict, './energies-f%d.h5' % numE, overwrite=True)

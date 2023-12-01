@@ -167,12 +167,29 @@ double Vkkpkb446,Vkkpkb266,Vkkpkb466,Vkkpkb666;
 
 gzFile pek_save;
 
+void printProgressBar(long current, long total) {
+    const int barWidth = 50; // Width of the progress bar in characters
+    int i;
+    float progress = (float)current / total;
+    int pos = barWidth * progress;
+
+    printf("[");
+    for (i = 0; i < barWidth; ++i) {
+        if (i < pos) printf("=");
+        else if (i == pos) printf(">");
+        else printf(" ");
+    }
+    printf("] %d %%\r", (int)(progress * 100));
+    fflush(stdout); // Flush the output buffer to update the progress bar in place
+}
+
 int main(int argc, char **argv)
 {
 
     int i,j,method,elements=0;
     int check, load, index;
     double RE_matrix, IM_matrix;
+    long totalElements =0;
     gzFile pek;
 
     // Check for proper argument count
@@ -191,7 +208,7 @@ int main(int argc, char **argv)
     printf("\n\nload=%d #STATES=%d #electrons=%d\n\n", load, STATES, electrons);
 
     // Memory allocation for unpaired electrons
-    if(!(un_paired = malloc(electrons * sizeof(int)))) {
+    if(!(un_paired = malloc((electrons + 1) * sizeof(int)))) {
       printf("No mem_un_paired!"); 
       exit(0);
       }
@@ -221,8 +238,8 @@ int main(int argc, char **argv)
 
     // If load is 0 and the number of three-particle elements is large, notify the user
     if (load == 0 && 0.5 * STATES * (STATES + 1.0) > 50000.0) {
-        printf("\n\nCalculating %ld three-particle elements...\n", (long)(0.5 * STATES * (STATES + 1.0)));
-        printf("Go get coffee!\n\n\n");
+        printf("\nCalculating %ld three-particle elements...\n", (long)(0.5 * STATES * (STATES + 1.0)));
+        printf("\nGo get coffee!\n\n");
     }
 
     // Initialize required data and parameters
@@ -257,6 +274,10 @@ int main(int argc, char **argv)
         }
     }
 
+    for (j = 0; j < STATES; j++) {
+        totalElements += j + 1;
+    }
+
     // Matrix calculation loop
     for (j = 0; j < STATES; j++) 
     {
@@ -268,7 +289,7 @@ int main(int argc, char **argv)
                 elements++;
                 if (elements % 500 == 0)
                 {
-                    printf("#elements = %ld\n", elements);
+                    printProgressBar(elements, totalElements);
                 }
                 method = method_judd(i, j);
                 calc_Vkkpkb(method, i, j);
@@ -304,10 +325,10 @@ int main(int argc, char **argv)
                 // Write matrix elements to file
                 gzprintf(pek, "%12.10lf %12.10lf\n", RE_matrix, IM_matrix);
 
-                // Progress logging
                 if (elements % 1000 == 0) {
-                    printf("#elements = %ld\n", elements);
+                    printProgressBar(elements, totalElements);
                 }
+                
             }
         }
     }
@@ -318,8 +339,8 @@ int main(int argc, char **argv)
         gzclose(pek);
     }
     gzclose(pek_save);
-
-    // Free allocated memory
+    
+    printf("\n");
     free(un_paired);
     free(states);
     free(states_tmp);
@@ -337,7 +358,6 @@ int main(int argc, char **argv)
 
     return EXIT_SUCCESS;
 }
-
 
 void load_parameters(void)
 {
@@ -513,9 +533,6 @@ double Matrix_element_alpha(int method, int i, int j)
 }
 
 
-
-
-
 double Matrix_element_gamma2(double power, int method, int i, int j)
 {
 
@@ -538,9 +555,7 @@ double Matrix_element_gamma2(double power, int method, int i, int j)
         }
     }
 
-
     return(sum*pow(-1.0,(double)signe));
-
 
     }
 
@@ -548,11 +563,35 @@ double Matrix_element_gamma2(double power, int method, int i, int j)
     {
 
     for(k=0; k<electrons; k++)
-    sum=sum + General_gamma(power, states[i][k].l, states[i][k].ml,states[i][k].ms, states[i][un_paired[1]].l, states[i][un_paired[1]].ml,states[i][un_paired[1]].ms,states[i][k].l, states[i][k].ml,states[i][k].ms,states_tmp[j][un_paired[1]].l, states_tmp[j][un_paired[1]].ml,states_tmp[j][un_paired[1]].ms)                  
+    sum=sum + General_gamma(power,
+                            states[i][k].l,
+                            states[i][k].ml,
+                            states[i][k].ms,
+                            states[i][un_paired[1]].l,
+                            states[i][un_paired[1]].ml,
+                            states[i][un_paired[1]].ms,
+                            states[i][k].l,
+                            states[i][k].ml,
+                            states[i][k].ms,
+                            states_tmp[j][un_paired[1]].l,
+                            states_tmp[j][un_paired[1]].ml,
+                            states_tmp[j][un_paired[1]].ms)                  
 
                 - 
 
-    General_gamma(power, states[i][k].l, states[i][k].ml,states[i][k].ms, states[i][un_paired[1]].l, states[i][un_paired[1]].ml,states[i][un_paired[1]].ms,states_tmp[j][un_paired[1]].l, states_tmp[j][un_paired[1]].ml,states_tmp[j][un_paired[1]].ms,states[i][k].l, states[i][k].ml,states[i][k].ms);
+    General_gamma(power,
+                  states[i][k].l,
+                  states[i][k].ml,
+                  states[i][k].ms,
+                  states[i][un_paired[1]].l,
+                  states[i][un_paired[1]].ml,
+                  states[i][un_paired[1]].ms,
+                  states_tmp[j][un_paired[1]].l,
+                  states_tmp[j][un_paired[1]].ml,
+                  states_tmp[j][un_paired[1]].ms,
+                  states[i][k].l,
+                  states[i][k].ml,
+                  states[i][k].ms);
 
     return(sum*pow(-1.0,(double)signe));
 
@@ -561,10 +600,34 @@ double Matrix_element_gamma2(double power, int method, int i, int j)
     else if(method==2)
     {
 
-    return((General_gamma(power, states[i][un_paired[1]].l, states[i][un_paired[1]].ml,states[i][un_paired[1]].ms, states[i][un_paired[2]].l, states[i][un_paired[2]].ml,states[i][un_paired[2]].ms,states_tmp[j][un_paired[1]].l, states_tmp[j][un_paired[1]].ml,states_tmp[j][un_paired[1]].ms,states_tmp[j][un_paired[2]].l, states_tmp[j][un_paired[2]].ml,states_tmp[j][un_paired[2]].ms)
+    return((General_gamma(power,
+                         states[i][un_paired[1]].l,
+                         states[i][un_paired[1]].ml,
+                         states[i][un_paired[1]].ms,
+                         states[i][un_paired[2]].l,
+                         states[i][un_paired[2]].ml,
+                         states[i][un_paired[2]].ms,
+                         states_tmp[j][un_paired[1]].l, 
+                         states_tmp[j][un_paired[1]].ml,
+                         states_tmp[j][un_paired[1]].ms,
+                         states_tmp[j][un_paired[2]].l,
+                         states_tmp[j][un_paired[2]].ml,
+                         states_tmp[j][un_paired[2]].ms)
                 - 
 
-    General_gamma(power, states[i][un_paired[1]].l, states[i][un_paired[1]].ml,states[i][un_paired[1]].ms, states[i][un_paired[2]].l, states[i][un_paired[2]].ml,states[i][un_paired[2]].ms,states_tmp[j][un_paired[2]].l, states_tmp[j][un_paired[2]].ml,states_tmp[j][un_paired[2]].ms,states_tmp[j][un_paired[1]].l, states_tmp[j][un_paired[1]].ml,states_tmp[j][un_paired[1]].ms)) * pow(-1.0,(double)signe));
+    General_gamma(power,
+                  states[i][un_paired[1]].l,
+                  states[i][un_paired[1]].ml,
+                  states[i][un_paired[1]].ms,
+                  states[i][un_paired[2]].l,
+                  states[i][un_paired[2]].ml,
+                  states[i][un_paired[2]].ms,
+                  states_tmp[j][un_paired[2]].l,
+                  states_tmp[j][un_paired[2]].ml,
+                  states_tmp[j][un_paired[2]].ms,
+                  states_tmp[j][un_paired[1]].l,
+                  states_tmp[j][un_paired[1]].ml,
+                  states_tmp[j][un_paired[1]].ms)) * pow(-1.0,(double)signe));
 
     }
 
@@ -1405,25 +1468,20 @@ int method_judd(int i, int j)
     {
         for (l=0;l<electrons; l++)
         {
-            if((states[i][k].ml==states_tmp[j][l].ml)
-                &&(states[i][k].ms==states_tmp[j][l].ms
-            ))
+            if((states[i][k].ml==states_tmp[j][l].ml) && (states[i][k].ms==states_tmp[j][l].ms))
             {
-        
-            if(l!=k)
-        { 
-        ml=states_tmp[j][l].ml;
-        ms=states_tmp[j][l].ms;
-
-        states_tmp[j][l].ml=states_tmp[j][k].ml;
-        states_tmp[j][l].ms=states_tmp[j][k].ms;
-
-        states_tmp[j][k].ml=ml;
-        states_tmp[j][k].ms=ms;
-        signe++;
-        }
-        break;
-        }
+                if(l!=k)
+                { 
+                    ml=states_tmp[j][l].ml;
+                    ms=states_tmp[j][l].ms;
+                    states_tmp[j][l].ml=states_tmp[j][k].ml;
+                    states_tmp[j][l].ms=states_tmp[j][k].ms;
+                    states_tmp[j][k].ml=ml;
+                    states_tmp[j][k].ms=ms;
+                    signe++;
+                }
+                break;
+            }
     
     } 
     
@@ -1431,10 +1489,14 @@ int method_judd(int i, int j)
 
     for(k=0; k<electrons; k++)
     {
-        if((states[i][k].ml!=states_tmp[j][k].ml)||(states[i][k].ms!=states_tmp[j][k].ms))
+        if((states[i][k].ml != states_tmp[j][k].ml) || (states[i][k].ms != states_tmp[j][k].ms))
         {
-            m++;  
+            m++;
             un_paired[m]=k;
+            // if (m == electrons){
+            //     printf("m=%d\n",m);
+            //     printf("unpaired=%d\n",un_paired[m]);
+            // }
         }
     }
 
@@ -1453,7 +1515,12 @@ double Matrix_element_Hm(int method, int i, int j)
         for(k=0; k<electrons; k++)
         {
 
-            H_m( states[i][k].l,states[i][k].ml,states[i][k].ms, states_tmp[j][k].l,states_tmp[j][k].ml, states_tmp[j][k].ms);
+            H_m( states[i][k].l,
+                 states[i][k].ml,
+                 states[i][k].ms,
+                 states_tmp[j][k].l,
+                 states_tmp[j][k].ml,
+                 states_tmp[j][k].ms);
             
             sumr=sumr+RE_H;
             sumi=sumi+IM_H;
@@ -1469,7 +1536,12 @@ double Matrix_element_Hm(int method, int i, int j)
     else if(method==1)
     {
 
-        H_m(states[i][un_paired[1]].l,states[i][un_paired[1]].ml,states[i][un_paired[1]].ms, states_tmp[j][un_paired[1]].l,states_tmp[j][un_paired[1]].ml, states_tmp[j][un_paired[1]].ms);
+        H_m(states[i][un_paired[1]].l,
+            states[i][un_paired[1]].ml,
+            states[i][un_paired[1]].ms,
+            states_tmp[j][un_paired[1]].l,
+            states_tmp[j][un_paired[1]].ml,
+            states_tmp[j][un_paired[1]].ms);
 
         RE_Matrix_element_Hm=RE_H*pow(-1.0,(double)signe);
         IM_Matrix_element_Hm=IM_H*pow(-1.0,(double)signe);

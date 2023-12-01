@@ -74,3 +74,64 @@ def save_to_h5(data, filename, group=None, comments='', overwrite=False):
                 if isinstance(value, str):
                     value = value.encode('utf-8')
                 group.create_dataset(key, data=value)
+
+def load_from_h5(filename, keys=None, only_keys=False):
+    '''
+    Load an H5 file and return its contents or its keys.
+
+    Parameters
+    ----------
+    filename: str
+        The path to the H5 file to load.
+    keys: (list, str, or None, optional)
+        A list of keys, a single key, or None to load all from the H5 file.
+        If a single key is given, then the function does not return
+        a dictionary with a comment but it simply returns the value of
+        that single key.
+    group: (h5py.Group, optional)
+        Current group for recursion. Defaults to None.
+    only_keys: (bool)
+        If set to True, returns only the keys without loading any data. Defaults to False.
+
+    Returns
+    -------
+    dict, value, list or None
+        Depending on the parameters, returns a dictionary, a value, a list of keys, or None.
+    Returns:
+    tuple: A tuple containing a dictionary with the loaded data and the comments string.
+    '''
+
+    def retrieve_group(group):
+        data = {}
+        for key in group:
+            if isinstance(group[key], h5py.Group):
+                data[key] = retrieve_group(group[key])
+            else:
+                data[key] = group[key][()]
+                if isinstance(data[key], bytes):
+                    data[key] = data[key].decode('utf-8')
+        return data
+
+    with h5py.File(filename, 'r') as h5f:
+        if only_keys:
+            comment = h5f.attrs.get('comments')
+            return list(h5f.keys()), comment
+
+        comment = h5f.attrs.get('comments')
+        
+        if keys:
+            data = {}
+            for key in keys:
+                if key in h5f:
+                    if isinstance(h5f[key], h5py.Group):
+                        data[key] = retrieve_group(h5f[key])
+                    else:
+                        data[key] = h5f[key][()]
+                        if isinstance(data[key], bytes):
+                            data[key] = data[key].decode('utf-8')
+        else:
+            data = retrieve_group(h5f)
+    if len(data) == 1:
+        return list(data.values())[0]
+    else:
+        return data, comment
